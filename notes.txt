@@ -1,0 +1,21 @@
+# POSTGRES
+
+# To connect to a> metadata db and b> custom db
+docker compose exec -it postgres psql -U airflow -d airflow
+docker compose exec -it postgres psql -U airflow -d postgres
+
+# List all tables 
+\dt *.*
+
+# AIRFLOW
+
+# List DAGs
+docker exec -it airflow-server-airflow-webserver-1 airflow dags list # Docker method - expects the container name
+docker compose exec airflow-webserver airflow dags list # Compose method - expectes the service name
+
+# List tasks in a DAG
+docker compose exec airflow-webserver airflow tasks list postgres_etl
+
+# Test a task (without running the whole DAG)
+docker compose exec airflow-webserver airflow tasks test postgres_etl transform 2025-08-23 # This will fail because upstream dependencies are not run. It runs only task 3 of 4
+docker compose exec airflow-scheduler airflow dags test postgres_etl 2025-08-23 # This will succeed because it runs the whole dag
