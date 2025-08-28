@@ -77,4 +77,23 @@ def on_failure_callback(ctx: Dict[str, Any]) -> None:
     tg_chat = Variable.get("TELEGRAM_CHAT_ID", default_var=None) 
 
     post_to_discord(msg, discord_url)
-    post_to_telegram(msg, tg_token, tg_chat)   
+    post_to_telegram(msg, tg_token, tg_chat) 
+
+def notify_success(dag_id: str, extra_msg: Optional[str] = None) -> None:
+    """
+    Sends a 'pipeline completed' message to Discord/Telegram if configured.
+    Uses your existing helper functions (best-effort; won't fail the DAG).
+    """
+    msg = f"✅ {dag_id} completed successfully."
+    if extra_msg:
+        msg += f" - {extra_msg}"
+
+    # Discord
+    discord_url = Variable.get("DISCORD_WEBHOOK_URL", default_var=None)
+    post_to_discord(msg, discord_url)
+
+    # Telegram (optional)
+    tg_token = Variable.get("TELEGRAM_BOT_TOKEN", default_var=None)
+    tg_chat  = Variable.get("TELEGRAM_CHAT_ID", default_var=None)
+    post_to_telegram(msg, tg_token, tg_chat)
+    log.info(msg)  

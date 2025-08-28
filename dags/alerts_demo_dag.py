@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models import Variable
-from modules.alerts_functions import on_failure_callback, post_to_discord, post_to_telegram
+from modules.alerts_functions import on_failure_callback, post_to_discord, post_to_telegram, notify_success
 import logging
 
 DEFAULT_ARGS = {
@@ -34,25 +34,15 @@ def alerts_demo_dag():
         raise ValueError("Deliberate failure for alert testing.")
     
     @task(trigger_rule=TriggerRule.ALL_SUCCESS)
-    def notify_success():
+    def notify_task():
         """
-        Sends a 'pipeline completed' message to Discord/Telegram if configured.
-        Uses your existing helper functions (best-effort; won't fail the DAG).
+        Call helper, pass dag_id + details
         """
-        msg = "✅ alerts_demo_dag completed successfully."
-        # Discord
-        discord_url = Variable.get("DISCORD_WEBHOOK_URL", default_var=None)
-        post_to_discord(msg, discord_url)
-
-        # Telegram (optional)
-        tg_token = Variable.get("TELEGRAM_BOT_TOKEN", default_var=None)
-        tg_chat  = Variable.get("TELEGRAM_CHAT_ID", default_var=None)
-        post_to_telegram(msg, tg_token, tg_chat)
-        print(msg)
+        notify_success("alerts_demo_dag")
 
     # Wire the graph: success notifier runs only if both upstream tasks succeed
     s = start_task()
     f = fail_task()
-    s >> f >> notify_success()
+    s >> f >> notify_task()
 
 dag_object = alerts_demo_dag()
