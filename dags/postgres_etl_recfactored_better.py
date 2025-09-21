@@ -2,8 +2,6 @@ from datetime import datetime
 import logging
 
 from airflow.decorators import dag, task
-from airflow.operators.postgres_operator import PostgresOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 from modules.db import fetch_all, run_sql, upsert_values
@@ -53,20 +51,38 @@ def postgres_etl_refactored_better():
     
     @task
     def write_data(transformed):
+        sql_count = "SELECT COUNT(*) FROM public.example_output;"
+        before_count = fetch_all(sql_count, conn_id="my_postgres")[0][0]
         # transformed is a list of tuples (id, value)
         upsert_values(sql.UPSERT_EXAMPLE_OUTPUT, transformed, conn_id="my_postgres")
+        after_count = fetch_all(sql_count, conn_id="my_postgres")[0][0]
+        rows_written = after_count - before_count
+        logging.info(f"Wrote {rows_written} rows to example output.")
+        return rows_written
+
+    @task
+    def report_rows_written(rows_written: int):
+        if transformed is not None:
+            logging.info(f"Wrote {rows_written} rows to example output.")
+        else:
+            logging.info("No rows were written to example output.") 
 
     trigger_downstream = TriggerDagRunOperator(
         task_id="trigger_downstream",
         trigger_dag_id="downstream_wait_for_postgres_etl",
-        conf={"reason": "upstream done"},
+        conf={"reason": "upstream_done"},
         wait_for_completion=False,
-    ) 
+    )
+
+
 
     ensure_output_table()
     rows = fetch_data()
     transformed = transform(rows)
-    write_data(transformed) >> trigger_downstream
+    written = write_data(transformed) 
+    written >> trigger_downstream
+    report_rows_written(written)
+    
 
 dag_object = postgres_etl_refactored_better()
 

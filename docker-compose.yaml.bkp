@@ -119,8 +119,7 @@ services:
     <<: *airflow-common
     command: webserver
     ports:
-      - "127.0.0.1:8081:8080"  # Binding to localhost only for security
-      # - "8080:8080"  # Uncomment this line to expose the web
+      - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
