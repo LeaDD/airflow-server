@@ -2,8 +2,7 @@
   
 
 # Airflow Server Notes
-
-  
+- http://stackedit.io/app#
 
 ## POSTGRES
 
@@ -69,8 +68,7 @@ I have closed the port 8080 - need to use SSH tunnel to reach the UI:
 
   
 
-# TODO
-
+## TODO
   
 
 1> Schedule postgres backup
