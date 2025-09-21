@@ -1,0 +1,109 @@
+
+  
+
+# Airflow Server Notes
+
+  
+
+## POSTGRES
+
+  
+
+### To connect to a> metadata db and b> custom db
+````bash
+docker compose exec -it postgres psql -U airflow -d airflow
+docker compose exec -it postgres psql -U airflow -d postgres
+````
+  
+
+### List all tables
+````bash
+
+\dt *.*
+````
+  
+
+## AIRFLOW
+
+  
+
+### List DAGs
+````bash
+docker exec -it airflow-server-airflow-webserver-1 airflow dags list # Docker method - expects the container name
+
+docker compose exec airflow-webserver airflow dags list # Compose method - expectes the service name
+````
+  
+
+### List tasks in a DAG
+````bash
+docker compose exec airflow-webserver airflow tasks list postgres_etl
+````
+  
+
+### Test a task (without running the whole DAG)
+
+- This will fail because upstream dependencies are not run. It runs only task 3 of 4
+````bash
+docker compose exec airflow-webserver airflow tasks test postgres_etl transform 2025-08-23 
+````
+-This will succeed because it runs the whole dag
+````bash
+docker compose exec airflow-scheduler airflow dags test postgres_etl 2025-08-23 # 
+````
+  
+
+## PRODUCTIONIZE SETUP
+
+  
+
+All modifications to the base yaml are done in docker-compose.override.yml
+
+I have closed the port 8080 - need to use SSH tunnel to reach the UI:
+````bash
+
+- ssh -N -L 8080:localhost:8081 youruser@yourserver
+
+- then open http://localhost:8080 in your browser
+````
+
+  
+
+# TODO
+
+  
+
+1> Schedule postgres backup
+
+````bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+STAMP=$(date +%F_%H-%M-%S)
+
+mkdir -p backups/postgres
+
+docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "backups/postgres/airflow_${STAMP}.sql.gz"
+
+ls -1t backups/postgres/airflow_*.sql.gz | tail -n +15 | xargs -r rm --
+
+  
+
+chmod +x backup-postgres.sh
+
+(crontab -l; echo "17 2 * * * cd /mnt/media/dev/airflow-server && ./backup-postgres.sh") | crontab -
+````
+
+2> Read-only webserver filesystem (least privilege)
+
+````bash
+services:
+	airflow-webserver:
+		read_only: true
+		tmpfs:
+			- /tmp
+````
+  
+
+3> Provider pinning: add a requirements.txt with only providers you actually use (e.g., apache-airflow-providers-postgres==X.Y.Z) and build a custom image later; for now it's fine.
