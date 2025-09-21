@@ -46,7 +46,7 @@ docker compose exec airflow-webserver airflow tasks list postgres_etl
 ````bash
 docker compose exec airflow-webserver airflow tasks test postgres_etl transform 2025-08-23 
 ````
--This will succeed because it runs the whole dag
+- This will succeed because it runs the whole dag
 ````bash
 docker compose exec airflow-scheduler airflow dags test postgres_etl 2025-08-23 # 
 ````
